@@ -2,13 +2,13 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
-import models
-import schemas
-import crud
-from database import engine, get_db
+# import models
+# import schemas
+# import crud
+# from database import engine, get_db
 
-# Create database tables
-models.Base.metadata.create_all(bind=engine)
+# # Create database tables
+# models.Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(
