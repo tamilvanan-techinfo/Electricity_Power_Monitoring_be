@@ -87,6 +87,11 @@ CHANNEL_LAYERS = {
 CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
 CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
 
+# Note: the per-connection 5s data loop now lives in core.consumers
+# (EchoConsumer._send_every_5_seconds) and runs entirely inside the ASGI
+# process — no Celery Beat schedule is needed for it. Celery/Redis above are
+# still used for the on-demand /api/stream/ burst (core.tasks.stream_data_for_duration).
+
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -134,6 +139,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 

@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
 from .forms import CycleForm, ParticipentForm, AllocateForm
 from .models import Cycle, Participent, ParticipentCycle
-
+from django.contrib import messages
+from django.db import IntegrityError
 
 def home(request):
     return render(request, 'home.html', {'title': 'Electricity Monitoring'})
@@ -34,6 +35,7 @@ def register_cycle(request):
             return redirect('dashboard')
     else:
         form = CycleForm()
+
     return render(request, 'cycle_form.html', {'form': form})
 
 
@@ -54,10 +56,18 @@ def allocate_cycle(request):
     if request.method == 'POST':
         form = AllocateForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('dashboard')
+            try:
+                form.save()
+                messages.success(request, "Cycle allocated successfully.")
+                return redirect('dashboard')
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "This participant has already been allocated to this cycle."
+                )
     else:
         form = AllocateForm()
+
     return render(request, 'allocate_form.html', {'form': form})
 
 

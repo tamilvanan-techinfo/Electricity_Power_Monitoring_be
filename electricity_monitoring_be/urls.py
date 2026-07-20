@@ -31,10 +31,10 @@ urlpatterns = [
     path('cycle/register/', web.register_cycle, name='register-cycle'),
     path('participent/register/', web.register_participent, name='register-participent'),
     path('allocate/', web.allocate_cycle, name='allocate-cycle'),
-    path('api/ping/', api.PingAPIView.as_view(), name='api-ping'),
-    path('api/stream/', api.StreamAPIView.as_view(), name='api-stream'),
+
     path('api-auth/', include('rest_framework.urls')),
     path('admin/', admin.site.urls),
+    path('api/update-reading/', api.UpdateReadingAPIView.as_view(), name='api-update-reading'),
 ]
 
 if settings.DEBUG:

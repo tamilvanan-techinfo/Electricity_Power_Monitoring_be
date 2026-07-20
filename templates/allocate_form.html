@@ -1,11 +1,25 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="max-w-md mx-auto mt-12 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-bold mb-4">Allocate Cycle to Participant</h2>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="mt-4 px-4 py-2 bg-yellow-600 text-white rounded">Allocate</button>
-    </form>
+  <div class="form-shell">
+    <div class="icon-badge-lg" style="background:var(--voltage-dim); color:var(--voltage);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 9V6a2 2 0 0 1 2-2h2M20 9V6a2 2 0 0 0-2-2h-2M4 15v3a2 2 0 0 0 2 2h2M20 15v3a2 2 0 0 1-2 2h-2"/><path d="M8 12h8"/>
+      </svg>
+    </div>
+    <span class="eyebrow tone-voltage">New Allocation</span>
+    <h2 class="text-2xl font-semibold mt-2 mb-1">Allocate cycle</h2>
+    <p class="text-sm mb-4" style="color:var(--text-dim);">Assign a cycle to a participant and log the starting readings.</p>
+
+    <svg class="wave-divider" viewBox="0 0 400 20" preserveAspectRatio="none">
+      <path d="M0,10 C16.7,2 33.3,2 50,10 C66.7,18 83.3,18 100,10 C116.7,2 133.3,2 150,10 C166.7,18 183.3,18 200,10 C216.7,2 233.3,2 250,10 C266.7,18 283.3,18 300,10 C316.7,2 333.3,2 350,10 C366.7,18 383.3,18 400,10" style="stroke:var(--voltage);"/>
+    </svg>
+
+    <div class="panel p-6">
+      <form method="post" class="panel-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-voltage btn-block mt-2">Allocate Cycle</button>
+      </form>
+    </div>
   </div>
 {% endblock %}

@@ -1,11 +1,25 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="max-w-md mx-auto mt-12 bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-bold mb-4">Register Cycle</h2>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="mt-4 px-4 py-2 bg-green-600 text-white rounded">Save</button>
-    </form>
+  <div class="form-shell">
+    <div class="icon-badge-lg" style="background:var(--current-dim); color:var(--current);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+      </svg>
+    </div>
+    <span class="eyebrow">New Cycle</span>
+    <h2 class="text-2xl font-semibold mt-2 mb-1">Register cycle</h2>
+    <p class="text-sm mb-4" style="color:var(--text-dim);">Add a controller to the network so it can start reporting readings.</p>
+
+    <svg class="wave-divider" viewBox="0 0 400 20" preserveAspectRatio="none">
+      <path d="M0,10 C16.7,2 33.3,2 50,10 C66.7,18 83.3,18 100,10 C116.7,2 133.3,2 150,10 C166.7,18 183.3,18 200,10 C216.7,2 233.3,2 250,10 C266.7,18 283.3,18 300,10 C316.7,2 333.3,2 350,10 C366.7,18 383.3,18 400,10"/>
+    </svg>
+
+    <div class="panel p-6">
+      <form method="post" class="panel-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-current btn-block mt-2">Save Cycle</button>
+      </form>
+    </div>
   </div>
 {% endblock %}

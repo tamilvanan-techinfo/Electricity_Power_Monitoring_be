@@ -1,49 +1,116 @@
 {% extends 'base.html' %}
 {% block content %}
-  <div class="grid grid-cols-3 gap-4">
-    <div class="col-span-2">
-      <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
-      <div class="bg-white p-4 rounded shadow mb-4">
-        <h3 class="font-semibold">Cycles</h3>
-        <ul>
-          {% for cycle in cycles %}
-            <li>{{ cycle.cycle_no }} (Controller: {{ cycle.controller_no }})</li>
-          {% empty %}
-            <li>No cycles registered.</li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="bg-white p-4 rounded shadow mb-4">
-        <h3 class="font-semibold">Participants</h3>
-        <ul>
-          {% for p in participants %}
-            <li>{{ p.name }} (DOB: {{ p.dob }})</li>
-          {% empty %}
-            <li>No participants registered.</li>
-          {% endfor %}
-        </ul>
-      </div>
-      <div class="bg-white p-4 rounded shadow">
-        <h3 class="font-semibold">Allocations</h3>
-        <ul>
-          {% for a in allocations %}
-            <li>{{ a.participent.name }} → {{ a.cycle.cycle_no }} (V: {{ a.voltage }} I: {{ a.amperage }})</li>
-          {% empty %}
-            <li>No allocations found.</li>
-          {% endfor %}
-        </ul>
+
+  <div class="mb-2">
+    <span class="eyebrow">System Overview</span>
+    <h2 class="text-2xl font-semibold mt-2">Dashboard</h2>
+  </div>
+  <svg class="wave-divider" viewBox="0 0 400 20" preserveAspectRatio="none">
+    <path d="M0,10 C16.7,2 33.3,2 50,10 C66.7,18 83.3,18 100,10 C116.7,2 133.3,2 150,10 C166.7,18 183.3,18 200,10 C216.7,2 233.3,2 250,10 C266.7,18 283.3,18 300,10 C316.7,2 333.3,2 350,10 C366.7,18 383.3,18 400,10"/>
+  </svg>
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="stat-card" style="--accent:var(--current);">
+      <span class="stat-num">{{ cycles|length }}</span>
+      <span class="stat-label">Cycles registered</span>
+    </div>
+    <div class="stat-card" style="--accent:var(--violet);">
+      <span class="stat-num">{{ participants|length }}</span>
+      <span class="stat-label">Participants</span>
+    </div>
+    <div class="stat-card" style="--accent:var(--voltage);">
+      <span class="stat-num">{{ allocations|length }}</span>
+      <span class="stat-label">Active allocations</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+
+    <div class="panel p-5">
+      <span class="eyebrow">Cycles</span>
+      <div class="mt-3">
+        {% for cycle in cycles %}
+          <div class="row-item row-item-stack">
+            <span class="row-title">Cycle {{ cycle.cycle_no }}</span>
+            <span class="row-meta">Controller {{ cycle.controller_no }}</span>
+          </div>
+        {% empty %}
+          <p class="empty-state">No cycles registered yet. Register one to start tracking readings.</p>
+        {% endfor %}
       </div>
     </div>
-    <aside>
-      <div class="bg-white p-4 rounded shadow mb-4">
-        <a href="/cycle/register/" class="block px-3 py-2 bg-green-600 text-white rounded text-center">Register Cycle</a>
+
+    <div class="panel p-5">
+      <span class="eyebrow tone-violet">Participants</span>
+      <div class="mt-3">
+        {% for p in participants %}
+          <div class="row-item row-item-stack">
+            <span class="row-title">{{ p.name }}</span>
+            <span class="row-meta">DOB {{ p.dob }}</span>
+          </div>
+        {% empty %}
+          <p class="empty-state">No participants registered yet. Add one to build the roster.</p>
+        {% endfor %}
       </div>
-      <div class="bg-white p-4 rounded shadow mb-4">
-        <a href="/participent/register/" class="block px-3 py-2 bg-indigo-600 text-white rounded text-center">Register Participant</a>
+    </div>
+
+    <div class="panel p-5">
+      <span class="eyebrow tone-voltage">Allocations</span>
+      <div class="mt-3">
+        {% for a in allocations %}
+          <div class="row-item row-item-stack">
+            <span class="row-title">{{ a.participent.name }} <span style="color:var(--text-faint);">&rarr;</span> Cycle {{ a.cycle.cycle_no }}</span>
+            <span class="flex gap-2">
+              <span class="badge badge-current">{{ a.voltage }} V</span>
+              <span class="badge badge-voltage">{{ a.amperage }} A</span>
+            </span>
+          </div>
+        {% empty %}
+          <p class="empty-state">No allocations yet. Assign a cycle to a participant to log readings.</p>
+        {% endfor %}
       </div>
-      <div class="bg-white p-4 rounded shadow">
-        <a href="/allocate/" class="block px-3 py-2 bg-yellow-600 text-white rounded text-center">Allocate Cycle</a>
-      </div>
-    </aside>
+    </div>
+
   </div>
+
+  <div class="mt-6">
+    <span class="eyebrow mb-3 block">Controls</span>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+      <a href="/cycle/register/" class="action-tile">
+        <span class="icon-badge tone-current">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        </span>
+        <span>
+          <span class="row-title block">Register cycle</span>
+          <span class="row-meta">Add a new controller</span>
+        </span>
+        <span class="arrow">&rarr;</span>
+      </a>
+
+      <a href="/participent/register/" class="action-tile">
+        <span class="icon-badge tone-violet">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19.5c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/></svg>
+        </span>
+        <span>
+          <span class="row-title block">Register participant</span>
+          <span class="row-meta">Add to the roster</span>
+        </span>
+        <span class="arrow">&rarr;</span>
+      </a>
+
+      <a href="/allocate/" class="action-tile">
+        <span class="icon-badge tone-voltage">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V6a2 2 0 0 1 2-2h2M20 9V6a2 2 0 0 0-2-2h-2M4 15v3a2 2 0 0 0 2 2h2M20 15v3a2 2 0 0 1-2 2h-2"/><path d="M8 12h8"/></svg>
+        </span>
+        <span>
+          <span class="row-title block">Allocate cycle</span>
+          <span class="row-meta">Assign & log readings</span>
+        </span>
+        <span class="arrow">&rarr;</span>
+      </a>
+
+    </div>
+  </div>
+
 {% endblock %}
