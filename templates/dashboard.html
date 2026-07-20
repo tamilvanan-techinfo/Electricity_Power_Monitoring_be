@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="grid grid-cols-3 gap-4">
+    <div class="col-span-2">
+      <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <h3 class="font-semibold">Cycles</h3>
+        <ul>
+          {% for cycle in cycles %}
+            <li>{{ cycle.cycle_no }} (Controller: {{ cycle.controller_no }})</li>
+          {% empty %}
+            <li>No cycles registered.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <h3 class="font-semibold">Participants</h3>
+        <ul>
+          {% for p in participants %}
+            <li>{{ p.name }} (DOB: {{ p.dob }})</li>
+          {% empty %}
+            <li>No participants registered.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold">Allocations</h3>
+        <ul>
+          {% for a in allocations %}
+            <li>{{ a.participent.name }} → {{ a.cycle.cycle_no }} (V: {{ a.voltage }} I: {{ a.amperage }})</li>
+          {% empty %}
+            <li>No allocations found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <aside>
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <a href="/cycle/register/" class="block px-3 py-2 bg-green-600 text-white rounded text-center">Register Cycle</a>
+      </div>
+      <div class="bg-white p-4 rounded shadow mb-4">
+        <a href="/participent/register/" class="block px-3 py-2 bg-indigo-600 text-white rounded text-center">Register Participant</a>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <a href="/allocate/" class="block px-3 py-2 bg-yellow-600 text-white rounded text-center">Allocate Cycle</a>
+      </div>
+    </aside>
+  </div>
+{% endblock %}
