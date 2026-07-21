@@ -31,7 +31,7 @@ urlpatterns = [
     path('cycle/register/', web.register_cycle, name='register-cycle'),
     path('participent/register/', web.register_participent, name='register-participent'),
     path('allocate/', web.allocate_cycle, name='allocate-cycle'),
-
+    path('screens/', include('screen_controller.urls')),
     path('api-auth/', include('rest_framework.urls')),
     path('admin/', admin.site.urls),
     path('api/update-reading/', api.UpdateReadingAPIView.as_view(), name='api-update-reading'),

@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% block content %}
+
+  <div class="mb-2 flex items-start justify-between flex-wrap gap-3">
+    <div>
+      <span class="eyebrow">Screen Control</span>
+      <h2 class="text-2xl font-semibold mt-2">Screens</h2>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="live-pill" id="wsStatusPill">
+        <span class="pulse-dot" id="wsStatusDot"></span>
+        <span id="wsStatusText">Connecting…</span>
+      </span>
+      <button type="button" class="action-tile action-tile-btn" id="openCreateBtn">
+        <span class="icon-badge tone-current">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </span>
+        <span>
+          <span class="row-title block">Add screen</span>
+          <span class="row-meta">Register a new screen</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <p class="form-flash-error">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <div class="panel p-5 mt-4">
+    <span class="eyebrow">All screens</span>
+    <div id="screensGrid" class="screens-grid mt-4">
+      {% for screen in screens %}
+        <div class="screen-card{% if screen.id == current_screen_id %} is-live{% endif %}">
+          <div style="position: relative;">
+            {% if screen.thumbnail %}
+              <img class="screen-thumb" src="{{ screen.thumbnail.url }}" alt="{{ screen.name }}">
+            {% else %}
+              <div class="screen-thumb-placeholder">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                  <rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8M12 18v2"/>
+                </svg>
+              </div>
+            {% endif %}
+            {% if screen.id == current_screen_id %}
+              <span class="screen-live-badge">Live</span>
+            {% endif %}
+          </div>
+
+          <div class="screen-card-body">
+            <span class="row-title block">{{ screen.name }}</span>
+            <span class="row-meta block">{{ screen.path }}</span>
+
+            <div class="screen-card-actions">
+              <form method="post" action="{% url 'set_current_screen' screen.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-set-live" {% if screen.id == current_screen_id %}disabled{% endif %}>
+                  {% if screen.id == current_screen_id %}Live now{% else %}Set live{% endif %}
+                </button>
+              </form>
+
+              <button
+                type="button"
+                class="btn-edit-open"
+                data-id="{{ screen.id }}"
+                data-name="{{ screen.name }}"
+                data-path="{{ screen.path }}"
+                data-thumbnail="{% if screen.thumbnail %}{{ screen.thumbnail.url }}{% endif %}"
+                data-update-url="{% url 'update_screen' screen.id %}"
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                class="btn-delete btn-delete-open"
+                data-name="{{ screen.name }}"
+                data-delete-url="{% url 'delete_screen' screen.id %}"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="empty-state">No screens registered yet. Add one to get started.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Create / Edit modal (one shared form; action + prefill swapped by JS) -->
+  <div class="modal-overlay" id="screenModalOverlay">
+    <div class="modal-box panel">
+      <div class="flex items-center justify-between mb-4">
+        <span class="eyebrow" id="modalTitle">Add screen</span>
+        <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close">&times;</button>
+      </div>
+
+      <form id="screenForm" method="post" enctype="multipart/form-data" action="{% url 'create_screen' %}">
+        {% csrf_token %}
+
+        <label class="field-label" for="screenName">Name</label>
+        <input class="field-input" type="text" id="screenName" name="name" placeholder="e.g. Leaderboard" required>
+
+        <label class="field-label" for="screenPath">Path</label>
+        <input class="field-input" type="text" id="screenPath" name="path" placeholder="e.g. /screens/leaderboard/" required>
+
+        <label class="field-label" for="screenThumbnail">Thumbnail</label>
+        <input class="field-input" type="file" id="screenThumbnail" name="thumbnail" accept="image/*">
+        <img id="thumbnailPreview" class="thumbnail-preview hidden" alt="Preview">
+
+        <div class="flex justify-end gap-2 mt-5">
+          <button type="button" class="btn-secondary" id="modalCancelBtn">Cancel</button>
+          <button type="submit" class="btn-primary" id="modalSubmitBtn">Save screen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirm modal (submits a real POST form; action swapped by JS) -->
+  <div class="modal-overlay" id="deleteModalOverlay">
+    <div class="modal-box modal-box-sm panel">
+      <span class="eyebrow tone-voltage">Delete screen</span>
+      <p class="mt-3 mb-5" style="color:var(--text-faint);">
+        Delete <strong id="deleteScreenName" style="color:inherit;"></strong>? This can't be undone.
+      </p>
+      <form id="deleteForm" method="post">
+        {% csrf_token %}
+        <div class="flex justify-end gap-2">
+          <button type="button" class="btn-secondary" id="deleteCancelBtn">Cancel</button>
+          <button type="submit" class="btn-danger">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .screens-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .screen-card {
+      position: relative;
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--panel-bg, rgba(255,255,255,0.02));
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .screen-card:hover { border-color: var(--current, #22c55e); transform: translateY(-2px); }
+    .screen-card.is-live { border-color: var(--current, #22c55e); box-shadow: 0 0 0 1px var(--current, #22c55e); }
+
+    .screen-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      background: rgba(255,255,255,0.04);
+      display: block;
+    }
+    .screen-thumb-placeholder {
+      width: 100%;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-faint, #6b7280);
+    }
+
+    .screen-live-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: var(--current, #22c55e);
+      color: #04140a;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+
+    .screen-card-body { padding: 12px 14px 14px; }
+    .screen-card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .screen-card-actions form { flex: 1; display: flex; }
+    .screen-card-actions button {
+      flex: 1;
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border, rgba(255,255,255,0.1));
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      transition: background .12s ease;
+    }
+    .screen-card-actions button:hover { background: rgba(255,255,255,0.06); }
+    .screen-card-actions .btn-set-live { color: var(--current, #22c55e); border-color: var(--current, #22c55e); }
+    .screen-card-actions .btn-set-live:disabled { opacity: .55; cursor: default; }
+    .screen-card-actions .btn-delete { color: #f87171; border-color: rgba(248,113,113,0.4); }
+
+    .action-tile-btn { cursor: pointer; border: none; background: none; text-align: left; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(2px);
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 16px;
+    }
+    .modal-overlay.is-open { display: flex; }
+    .modal-box { width: 100%; max-width: 420px; padding: 20px; }
+    .modal-box-sm { max-width: 360px; }
+    .modal-close {
+      background: none; border: none; color: var(--text-faint, #9ca3af);
+      font-size: 22px; line-height: 1; cursor: pointer;
+    }
+
+    .field-label { display: block; font-size: 12.5px; font-weight: 600; margin: 12px 0 6px; color: var(--text-faint, #9ca3af); }
+    .field-label:first-of-type { margin-top: 0; }
+    .field-input {
+      width: 100%;
+      padding: 9px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border, rgba(255,255,255,0.12));
+      background: rgba(255,255,255,0.03);
+      color: inherit;
+      font: inherit;
+      box-sizing: border-box;
+    }
+    .field-input:focus { outline: none; border-color: var(--current, #22c55e); }
+
+    .thumbnail-preview {
+      margin-top: 10px;
+      width: 100%;
+      max-height: 140px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border, rgba(255,255,255,0.1));
+    }
+    .hidden { display: none !important; }
+
+    .form-flash-error {
+      color: #f87171;
+      font-size: 13.5px;
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+    }
+
+    .btn-primary, .btn-secondary, .btn-danger {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--current, #22c55e); color: #04140a; }
+    .btn-secondary { background: transparent; border-color: var(--border, rgba(255,255,255,0.15)); color: inherit; }
+    .btn-danger { background: #f87171; color: #2b0a0a; }
+
+    #wsStatusDot.is-down { background: #f87171; }
+    #wsStatusDot.is-connecting { background: #fbbf24; }
+  </style>
+
+<script>
+    (function () {
+
+    const WS_URL = "ws://127.0.0.1:8000/ws/screen/admin/";
+    const RECONNECT_DELAY_MS = 2000;
+
+    let socket = null;
+    let reconnectTimer = null;
+
+    const statusDot = document.getElementById("wsStatusDot");
+    const statusText = document.getElementById("wsStatusText");
+
+    function connect() {
+
+        setStatus("connecting");
+
+        socket = new WebSocket(WS_URL);
+
+        socket.onopen = () => {
+            console.log("Connected");
+            setStatus("live");
+        };
+
+        socket.onmessage = (event) => {
+
+            const data = JSON.parse(event.data);
+
+            console.log(data);
+
+            if (data.type === "screen_changed") {
+
+                console.log("Current Screen :", data.screen_name);
+
+                window.location.reload();
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.error(error);
+        };
+
+        socket.onclose = () => {
+
+            setStatus("down");
+
+            reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
+        };
+    }
+
+    function setStatus(state) {
+
+        statusDot.classList.remove("is-down", "is-connecting");
+
+        if (state === "live") {
+
+            statusText.textContent = "Live";
+
+        } else if (state === "connecting") {
+
+            statusDot.classList.add("is-connecting");
+            statusText.textContent = "Connecting...";
+
+        } else {
+
+            statusDot.classList.add("is-down");
+            statusText.textContent = "Disconnected";
+        }
+    }
+
+    connect();
+
+    window.addEventListener("beforeunload", () => {
+
+        clearTimeout(reconnectTimer);
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+    });
+
+    // -------------------------
+    // Set Live Button
+    // -------------------------
+
+    function setLive(screenId) {
+
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+
+            alert("WebSocket is not connected.");
+            return;
+        }
+
+        socket.send(JSON.stringify({
+            action: "set_live",
+            screen_id: Number(screenId)
+        }));
+    }
+
+    document.querySelectorAll(".btn-set-live").forEach((button) => {
+
+        button.addEventListener("click", () => {
+
+            setLive(button.dataset.screenId);
+
+        });
+
+    });
+
+})();
+</script>
+
+{% endblock %}

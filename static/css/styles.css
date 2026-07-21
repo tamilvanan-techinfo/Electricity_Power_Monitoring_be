@@ -569,9 +569,6 @@ video {
 .static {
   position: static;
 }
-.sticky {
-  position: sticky;
-}
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -609,14 +606,14 @@ video {
 .flex {
   display: flex;
 }
+.table {
+  display: table;
+}
 .grid {
   display: grid;
 }
 .max-w-6xl {
   max-width: 72rem;
-}
-.transform {
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 .grid-cols-1 {
   grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -709,31 +706,6 @@ video {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-.antialiased {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-.outline {
-  outline-style: solid;
-}
-.blur {
-  --tw-blur: blur(8px);
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.filter {
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.backdrop-filter {
-  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
-}
-.transition {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.ease-in-out {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
   .topbar {
     background: rgba(9, 13, 18, 0.78);
@@ -1060,48 +1032,6 @@ video {
     background: var(--voltage-dim);
   }
 
-  .badge-violet {
-    color: var(--violet);
-    border-color: rgba(155, 140, 255, 0.3);
-    background: var(--violet-dim);
-  }
-
-  .rank-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--text-faint);
-    width: 1.6rem;
-    flex: none;
-    text-align: right;
-  }
-
-  .avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    flex: none;
-    overflow: hidden;
-    background: var(--panel-3);
-    border: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .avatar img {
-    width: 100%;
-    height: 100%;
-    -o-object-fit: cover;
-       object-fit: cover;
-    display: block;
-  }
-
-  .avatar-fallback {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--text-dim);
-  }
-
   .empty-state {
     font-size: 0.85rem;
     color: var(--text-faint);
@@ -1236,15 +1166,24 @@ video {
     justify-content: center;
     margin-bottom: 1rem;
   }
+.\[web\:36\] {
+  web: 36;
+}
+.\[web\:44\] {
+  web: 44;
+}
+.\[web\:47\] {
+  web: 47;
+}
 
-  @media (min-width: 640px) {
+@media (min-width: 640px) {
 
   .sm\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-  @media (min-width: 1024px) {
+@media (min-width: 1024px) {
 
   .lg\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -21,6 +21,9 @@ class ParticipentCycle(models.Model):
     voltage = models.FloatField(null=True, blank=True, default=0.0)
     amperage = models.FloatField(null=True, blank=True, default=0.0)
     updated_at = models.DateTimeField(auto_now=True)
+    total_power = models.FloatField(null=True, blank=True, default=0.0)
+    total_voltage = models.FloatField(null=True, blank=True, default=0.0)
+    total_amperage = models.FloatField(null=True, blank=True, default=0.0)
 
     def __str__(self):
         return f"{self.participent.name} - {self.cycle.cycle_no}"
