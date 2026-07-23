@@ -21,7 +21,7 @@ venv.bak/
 # Django
 # ===========================
 *.log
-db.sqlite3
+
 db.sqlite3-journal
 media/
 staticfiles/
@@ -87,7 +87,7 @@ htmlcov/
 .mypy_cache/
 .pyre/
 .pytype/
-
+s
 # ===========================
 # Jupyter
 # ===========================
