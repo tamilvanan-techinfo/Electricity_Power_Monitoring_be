@@ -373,6 +373,7 @@
             alert("WebSocket is not connected.");
             return;
         }
+        console.log("Setting live screen to ID:", screenId);
 
         socket.send(JSON.stringify({
             action: "set_live",

@@ -164,9 +164,7 @@ class EchoConsumer(AsyncWebsocketConsumer):
             .order_by('-power')  # Highest power first
         )
 
-        is_group = Grouping.objects.first().is_grouping
         grouped_allocations = {}
-        grouped_allocations[is_group] = is_group
         for allocation in allocations:
             
             cycle_no = allocation.cycle.cycle_no

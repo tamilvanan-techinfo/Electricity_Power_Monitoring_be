@@ -4,16 +4,33 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import ParticipentCycle
-
+from .models import *
+from screen_controller.models import Screen
+from screen_controller.serializer import ScreenSerializer
 
 from django.db.models import F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import AllowAny
+
+
+class LastScreenAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [] 
+    def get(self,request):
+        try:
+            screen = Screen.objects.get(is_live=True)
+            serializer = ScreenSerializer(screen)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Screen.DoesNotExist:
+            return Response({"error": "No live screen found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UpdateReadingAPIView(APIView):
-
+    permission_classes = [AllowAny]
+    authentication_classes = [] 
     def post(self, request):
         cycle_id = request.data.get("cycle_id")
         voltage = request.data.get("voltage")
