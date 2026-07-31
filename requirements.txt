@@ -1,6 +1,0 @@
-Django>=6.0.7
-channels
-channels_redis
-djangorestframework
-redis
-celery

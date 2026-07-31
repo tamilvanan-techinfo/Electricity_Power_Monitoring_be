@@ -58,3 +58,4 @@ def set_current_screen(request, screen_id):
         # notify websocket clients here
 
     return redirect("screens")
+

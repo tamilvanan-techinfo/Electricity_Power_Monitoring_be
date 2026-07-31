@@ -31,6 +31,8 @@ class LastScreenAPIView(APIView):
 class UpdateReadingAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [] 
+    def get(self,request):
+        return Response("Hello")
     def post(self, request):
         cycle_id = request.data.get("cycle_id")
         voltage = request.data.get("voltage")
@@ -60,6 +62,17 @@ class UpdateReadingAPIView(APIView):
 
             # reload actual numeric totals after F() updates
             allocation.refresh_from_db()  # [web:36][web:44][web:47]
+            try:
+                power_monitor = PowerMonitor.objects.create(
+                    participent = allocation,
+                    current_power = current_power,
+                    current_amperage = current_amperage,
+                    total_power = allocation.total_power,
+                    total_voltage = allocation.total_voltage,
+                    total_amperage =  allocation.total_amperage
+                    )
+            except Exception as e:
+                print(e)
 
             return Response(
                 {

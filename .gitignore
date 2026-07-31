@@ -13,6 +13,7 @@ __pycache__/
 env/
 venv/
 .venv/
+.env312/
 ENV/
 env.bak/
 venv.bak/
@@ -21,10 +22,8 @@ venv.bak/
 # Django
 # ===========================
 *.log
-
+db.sqlite3
 db.sqlite3-journal
-media/
-staticfiles/
 
 # Local settings
 local_settings.py
@@ -123,3 +122,21 @@ desktop.ini
 *.pem
 *.key
 *.crt
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore all Django migration files
+**/migrations/*.py
+**/migrations/*.pyc
+
+# Keep __init__.py inside migrations
+!**/migrations/__init__.py
+
+# Ignore pycache inside migrations
+**/migrations/__pycache__/
+
+# Ignore all __pycache__ folders recursively
+**/__pycache__/

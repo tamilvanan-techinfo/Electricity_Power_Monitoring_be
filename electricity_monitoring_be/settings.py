@@ -64,14 +64,14 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://172.25.32.1:8000/"
+    "http://172.25.32.1:8000"
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'electricity_monitoring_be.urls'
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
-    "http://172.25.32.1:8000/"
+    "http://172.25.32.1:8000"
 ]
 TEMPLATES = [
     {
@@ -105,7 +105,12 @@ CHANNEL_LAYERS = {
 
 CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
 CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
-
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+    }
+}
 # Note: the per-connection 5s data loop now lives in core.consumers
 # (EchoConsumer._send_every_5_seconds) and runs entirely inside the ASGI
 # process — no Celery Beat schedule is needed for it. Celery/Redis above are
@@ -119,6 +124,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        "OPTIONS": {
+            "timeout": 20,  # seconds to wait for the lock before failing
+        },
     }
 }
 

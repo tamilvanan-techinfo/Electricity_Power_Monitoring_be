@@ -6,10 +6,14 @@ from django.urls import path, re_path
 
 from core.consumers import EchoConsumer
 from screen_controller.consumers import ScreenConsumer
-
+from core.power_monitor_consumer import PowerMonitorConsumer
 
 websocket_urlpatterns = [
     path('ws/', EchoConsumer.as_asgi()),
     re_path(r"ws/screen/(?P<role>\w+)/$", ScreenConsumer.as_asgi()),
+    re_path(
+        r"ws/power-monitor/(?P<role>admin|client)/$",
+        PowerMonitorConsumer.as_asgi(),
+    ),
     
 ]

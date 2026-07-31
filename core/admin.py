@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Cycle, Grouping, Participent, ParticipentCycle
-
+from .models import Cycle, Grouping, Participent, ParticipentCycle,ActiveParticipent
+from screen_controller.models import *
 
 @admin.register(Cycle)
 class CycleAdmin(admin.ModelAdmin):
@@ -19,3 +19,6 @@ class ParticipentCycleAdmin(admin.ModelAdmin):
 @admin.register(Grouping)
 class GroupingAdmin(admin.ModelAdmin):
     list_display = ('id', 'is_grouping')
+
+admin.site.register(Screen)
+admin.site.register(ActiveParticipent)
