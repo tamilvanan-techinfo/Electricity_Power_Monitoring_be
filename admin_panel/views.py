@@ -21,6 +21,7 @@ from .serializer import LoginSerializer
 from rest_framework.permissions import IsAuthenticated
 
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import F
 
 class LoginAPIView(APIView):
     # Allow anyone to call this endpoint (overrides DEFAULT_PERMISSION_CLASSES)
@@ -358,7 +359,8 @@ class ParticipentCycleAPIView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            serializer = ParticipentCycleSerializer(allocation)
+            serializer = ParticipentCycleSerializer(allocation, context={"request": request})
+
 
             return Response(
                 {
@@ -376,7 +378,7 @@ class ParticipentCycleAPIView(APIView):
             .order_by("id")
         )
 
-        serializer = ParticipentCycleSerializer(allocations, many=True)
+        serializer = ParticipentCycleSerializer(allocations, many=True, context={"request": request})
 
         return Response(
             {
@@ -451,17 +453,44 @@ class ParticipentCycleAPIView(APIView):
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        # Get current readings from request
+        update_data = {}
+        data = request.data
 
-        serializer = ParticipentCycleSerializer(
-            allocation,
-            data=request.data,
-            partial=True,
-        )
+        if "participent" in request.data:
+            allocation.participent_id = data['participent']
+            allocation.save()
 
-        if serializer.is_valid():
-            serializer.save()
+        if "cycle" in request.data:
+            allocation.cycle_id = data['cycle']
+            allocation.save()
+        if "power" in request.data:
+            allocation.total_power  += data['power']
+            allocation.power = data['power']
+            allocation.save()
 
-            return Response(
+        if "voltage" in request.data:
+            allocation.total_voltage+=data['voltage']
+            allocation.voltage = data['voltage']
+            allocation.save()
+            
+       
+
+        if "amperage" in request.data:
+            allocation.total_amperage+=data['amperage']
+            allocation.amperage = data['amperage']
+            allocation.save()
+        
+
+        # # Update current readings and increment totals
+        # ParticipentCycle.objects.filter(pk=pk).update(**update_data)
+
+        # Reload updated object
+        allocation.refresh_from_db()
+
+        serializer = ParticipentCycleSerializer(allocation, context={"request": request})
+
+        return Response(
                 {
                     "status": True,
                     "message": "Allocation updated successfully.",
@@ -470,14 +499,7 @@ class ParticipentCycleAPIView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        return Response(
-            {
-                "status": False,
-                "message": "Unable to update allocation.",
-                "errors": serializer.errors,
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+       
 
     def delete(self, request, pk):
 
