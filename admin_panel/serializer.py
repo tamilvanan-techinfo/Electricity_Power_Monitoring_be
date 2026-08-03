@@ -19,9 +19,34 @@ class ParticipentCycleSerializer(serializers.ModelSerializer):
     cycle_no = serializers.CharField(source="cycle.cycle_no", read_only=True)
     controller_no = serializers.CharField(source="cycle.controller_no", read_only=True)
 
+    participent = serializers.PrimaryKeyRelatedField(queryset=Participent.objects.all())
+    cycle = serializers.PrimaryKeyRelatedField(queryset=Cycle.objects.all())
+    participent_profile = serializers.SerializerMethodField()
+
+    def get_participent_profile(self, obj):
+        request = self.context.get("request")
+        if obj.participent.profile and request:
+            return request.build_absolute_uri(obj.participent.profile.url)
+        return None
+
     class Meta:
         model = ParticipentCycle
-        fields = "__all__"
+        fields = [
+        "id",
+        "participent",
+        "participent_name",
+        "participent_profile",
+        "cycle",
+        "cycle_no",
+        "controller_no",
+        "power",
+        "voltage",
+        "amperage",
+        "total_power",
+        "total_voltage",
+        "total_amperage",
+        "updated_at",
+    ]
 
 
 from django.contrib.auth import authenticate
