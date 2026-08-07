@@ -9,6 +9,30 @@ from django.utils import timezone
 
 from .models import PowerMonitor, ActiveParticipent, Cycle
 
+def format_duration(total_seconds):
+    """
+    Formats a duration in seconds using only minutes and seconds —
+    never hours. Minutes accumulate past 60 instead of rolling over
+    into an hours unit:
+        45      -> "45s"
+        150     -> "2m 30s"
+        7500     -> "125m 0s"
+
+    Anything under 60s shows seconds only. 60s or more shows minutes
+    and remaining seconds together.
+    """
+    if total_seconds is None:
+        total_seconds = 0.0
+
+    total_seconds = max(0.0, total_seconds)
+    total_seconds_int = int(round(total_seconds))
+
+    if total_seconds_int < 60:
+        return f"{total_seconds_int}s"
+
+    minutes = total_seconds_int // 60
+    seconds = total_seconds_int % 60
+    return f"{minutes}m"
 
 class PowerMonitorConsumer(AsyncWebsocketConsumer):
 
@@ -227,6 +251,14 @@ class PowerMonitorConsumer(AsyncWebsocketConsumer):
         live changes: at 9:40 with a 10-min ActiveParticipent row you get
         [9:30, 9:40]; at 9:41 you get [9:31, 9:41]; if the row's
         time_duration or cycle set changes, the next tick reflects that.
+
+        Each participant's bucket also carries:
+          - duration_seconds: raw float, total time actively cycling on
+            this allocation (from ParticipentCycle.duration, accumulated
+            by the post_save signal on PowerMonitor)
+          - duration_display: the same value formatted into the largest
+            sensible unit — "45s" under a minute, "3m" under an hour,
+            "2h" at an hour or beyond — for direct display in the UI.
         """
         now = timezone.now()
 
@@ -242,6 +274,7 @@ class PowerMonitorConsumer(AsyncWebsocketConsumer):
             "participent_id",
             "participent__cycle__cycle_no",
             "participent__participent__name",
+            "participent__duration",
         ).order_by("participent_id", "updated_at")
 
         if minutes is not None:
@@ -251,13 +284,20 @@ class PowerMonitorConsumer(AsyncWebsocketConsumer):
         if cycle_nos:
             readings = readings.filter(participent__cycle__cycle_no__in=cycle_nos)
 
-        grouped = defaultdict(lambda: {"participant_name": None, "cycle_no": None, "points": []})
+        grouped = defaultdict(lambda: {
+            "participant_name": None,
+            "cycle_no": None,
+            "duration_seconds": 0.0,
+            "points": [],
+        })
 
         for item in readings:
             key = item.participent_id
             bucket = grouped[key]
             bucket["participant_name"] = item.participent.participent.name
             bucket["cycle_no"] = item.participent.cycle.cycle_no
+            duration = item.participent.duration
+            bucket["duration_seconds"] = duration.total_seconds() if duration else 0.0
             bucket["points"].append({
                 "time": item.updated_at.isoformat(),
                 "power": item.current_power,
@@ -270,6 +310,8 @@ class PowerMonitorConsumer(AsyncWebsocketConsumer):
                 "participant_cycle_id": key,
                 "participant_name": bucket["participant_name"],
                 "cycle_no": bucket["cycle_no"],
+                "duration_seconds": bucket["duration_seconds"],
+                "duration_display": format_duration(bucket["duration_seconds"]),
                 "points": bucket["points"],
             }
             for key, bucket in grouped.items()

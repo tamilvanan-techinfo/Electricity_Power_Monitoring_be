@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'admin_panel',
         "rest_framework_simplejwt.token_blacklist",
-        'corsheaders'
+        'corsheaders',
+        "cloud_sync"
 ]
 
 MIDDLEWARE = [
@@ -93,22 +94,22 @@ WSGI_APPLICATION = 'electricity_monitoring_be.wsgi.application'
 # Channels ASGI application
 ASGI_APPLICATION = 'electricity_monitoring_be.asgi.application'
 
-# Channel layer configuration - uses Redis. Install `channels_redis` and run Redis locally.
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("redis-server", 6379)],
         },
     },
 }
 
-CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
+CELERY_BROKER_URL = "redis://redis-server:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis-server:6379/0"
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://redis-server:6379/1",
     }
 }
 # Note: the per-connection 5s data loop now lives in core.consumers

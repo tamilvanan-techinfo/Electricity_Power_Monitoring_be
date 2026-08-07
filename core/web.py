@@ -5,6 +5,7 @@ from .forms import CycleForm, ParticipentForm, AllocateForm
 from .models import Cycle, Participent, ParticipentCycle
 from django.contrib import messages
 from django.db import IntegrityError
+from .cache_utils import get_dashboard_context, invalidate_dashboard_cache
 
 def home(request):
     return render(request, 'home.html', {'title': 'Electricity Monitoring'})
@@ -16,14 +17,8 @@ def login_view(request):
 
 @login_required
 def dashboard(request):
-    cycles = Cycle.objects.all()
-    participants = Participent.objects.all()
-    allocations = ParticipentCycle.objects.all()
-    return render(request, 'dashboard.html', {
-        'cycles': cycles,
-        'participants': participants,
-        'allocations': allocations,
-    })
+    context = get_dashboard_context()
+    return render(request, 'dashboard.html', context)
 
 
 @login_required
@@ -45,6 +40,7 @@ def register_participent(request):
         form = ParticipentForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
+            invalidate_dashboard_cache()
             return redirect('dashboard')
     else:
         form = ParticipentForm()
@@ -58,6 +54,7 @@ def allocate_cycle(request):
         if form.is_valid():
             try:
                 form.save()
+                invalidate_dashboard_cache()
                 messages.success(request, "Cycle allocated successfully.")
                 return redirect('dashboard')
             except IntegrityError:

@@ -40,10 +40,10 @@ class EchoConsumer(AsyncWebsocketConsumer):
         task = getattr(self, 'send_loop_task', None)
         if task is not None:
             task.cancel()
-
+   
         try:
             await self.channel_layer.group_discard('devices', self.channel_name)
-        except Exception as exc:
+        except Exception as exc:   
             logger.exception('Failed to discard channel from group "devices": %s', exc)
 
     async def device_message(self, event):

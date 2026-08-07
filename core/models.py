@@ -1,5 +1,6 @@
 from django.db import models
-
+from datetime import timedelta
+from django.db import models
 # Create your models here.
 class Cycle(models.Model):
     cycle_no = models.CharField(max_length=100,unique=True)
@@ -24,7 +25,7 @@ class ParticipentCycle(models.Model):
     total_power = models.FloatField(null=True, blank=True, default=0.0)
     total_voltage = models.FloatField(null=True, blank=True, default=0.0)
     total_amperage = models.FloatField(null=True, blank=True, default=0.0)
-
+    duration = models.DurationField(null=True, blank=True, default=timedelta)
     def __str__(self):
         return f"{self.id}"
 

@@ -4,6 +4,10 @@ import json
 from core.models import *
 from .models import *
 from .serializer import *
+from admin_panel.models import FreeText
+import base64
+from django.core.files.base import ContentFile
+
 CAMEL_TO_SNAKE_FIELD_MAP = {
         "x": "x",
         "y": "y",
@@ -93,6 +97,24 @@ class ScreenConsumer(AsyncWebsocketConsumer):
                                     "init_data":init_data
                                 },
                             )
+            elif screen.id == 8:
+                data = await self.getFreeText()
+                await self.channel_layer.group_send(
+                    "screen_client",
+                    {
+                        "type": "screen_changed",
+                        "screen_id": screen.id,
+                        "screen_name": screen.name,
+                        "path": screen.path,
+                        "thumbnail": (
+                            screen.thumbnail.url
+                            if screen.thumbnail
+                            else None
+                        ),
+                        "is_live": screen.is_live,
+                        "init_data":data
+                    },
+                )
 
             else:
                 await self.channel_layer.group_send(
@@ -147,6 +169,23 @@ class ScreenConsumer(AsyncWebsocketConsumer):
             except Exception as e:
                 print(e)
 
+        elif action == "send_free_text":
+            try:
+                print("Received free text:", data)
+                data = await self.saveFreeText(data)
+
+                await self.channel_layer.group_send(
+                    "screen_client",
+                    {
+                        "type": "free_text_updated",
+                        "content": data.text,
+                        "bg_image_url": data.bg_image.url if data.bg_image else None,
+                        "style": data.style,
+                    }
+                )
+            except Exception as e:
+                print(e)
+
     async def screen_changed(self, event):
         data={
             "type": "screen_changed",
@@ -171,6 +210,16 @@ class ScreenConsumer(AsyncWebsocketConsumer):
                 {
                     "type": "window_update",
                     "properties": event["properties"],
+                    
+                }
+            )
+        )
+    async def free_text_updated(self,event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "free_text_updated",
+                    "data":event
                     
                 }
             )
@@ -246,3 +295,27 @@ class ScreenConsumer(AsyncWebsocketConsumer):
             response["height"] = screen.height
 
         return response
+
+
+    @database_sync_to_async
+    def getFreeText(self):
+        free_text = FreeText.objects.last()
+        return free_text.text if free_text else ""
+
+    @database_sync_to_async
+    def saveFreeText(self, data):
+        free_text = FreeText.objects.create(
+            text=data.get("text", ""),
+            style=data.get("style", {}),
+        )
+
+        bg_image = data.get("bgImage")
+        if bg_image and bg_image.get("data"):
+            decoded = base64.b64decode(bg_image["data"])
+            free_text.bg_image.save(
+                bg_image.get("name", "background.jpg"),
+                ContentFile(decoded),
+                save=True,
+            )
+
+        return free_text

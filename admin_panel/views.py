@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from core.models import Cycle, Participent, ParticipentCycle
+from core.models import Cycle, Participent, ParticipentCycle,PowerMonitor
 from screen_controller.models import Screen
 from screen_controller.serializer import *
 from .serializer import (
@@ -11,7 +11,7 @@ from .serializer import (
     ParticipentCycleSerializer,
 )
 
-
+from admin_panel.models import FreeText
 
 from rest_framework.permissions import AllowAny
 
@@ -21,6 +21,9 @@ from .serializer import LoginSerializer
 from rest_framework.permissions import IsAuthenticated
 
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
+from django.db.models import F
+from django.shortcuts import get_object_or_404
 
 class LoginAPIView(APIView):
     # Allow anyone to call this endpoint (overrides DEFAULT_PERMISSION_CLASSES)
@@ -424,59 +427,91 @@ class ParticipentCycleAPIView(APIView):
         )
 
     def put(self, request, pk):
-
-        try:
-            allocation = ParticipentCycle.objects.get(pk=pk)
-        except ParticipentCycle.DoesNotExist:
-            return Response(
-                {
-                    "status": False,
-                    "message": "Allocation not found."
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
         cycle_id = request.data.get("cycle")
 
-        if cycle_id:
-            exists = ParticipentCycle.objects.filter(
-                cycle_id=cycle_id
-            ).exclude(pk=pk)
+        # Parse+validate the numeric readings up front, before touching the DB.
+        try:
+            power = float(request.data.get("power", 0) or 0)
+            voltage = float(request.data.get("voltage", 0) or 0)
+            amperage = float(request.data.get("amperage", 0) or 0)
+        except (TypeError, ValueError):
+            return Response(
+                {"status": False, "message": "power/voltage/amperage must be numbers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-            if exists.exists():
+        with transaction.atomic():
+            # Locks this row for the transaction so two rapid PUTs for the same
+            # participant can't both read the same "before" total and clobber
+            # each other's increment.
+            allocation = get_object_or_404(
+                ParticipentCycle.objects.select_for_update(), pk=pk
+            )
+
+            if cycle_id:
+                if (
+                    ParticipentCycle.objects.filter(cycle_id=cycle_id)
+                    .exclude(pk=pk)
+                    .exists()
+                ):
+                    return Response(
+                        {"status": False, "message": "Cycle is already allocated."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            serializer = ParticipentCycleSerializer(
+                allocation, data=request.data, partial=True
+            )
+            if not serializer.is_valid():
                 return Response(
                     {
                         "status": False,
-                        "message": "Cycle is already allocated."
+                        "message": "Unable to update allocation.",
+                        "errors": serializer.errors,
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        serializer = ParticipentCycleSerializer(
-            allocation,
-            data=request.data,
-            partial=True,
-        )
-
-        if serializer.is_valid():
             serializer.save()
 
-            return Response(
-                {
-                    "status": True,
-                    "message": "Allocation updated successfully.",
-                    "data": serializer.data,
-                },
-                status=status.HTTP_200_OK,
+            # Atomic DB-side increment — runs as a single SQL UPDATE, correct
+            # even under concurrent requests.
+            ParticipentCycle.objects.filter(pk=pk).update(
+                total_power=F("total_power") + power,
+                total_voltage=F("total_voltage") + voltage,
+                total_amperage=F("total_amperage") + amperage,
+            )
+
+            # Pull the real post-increment totals back into the Python object.
+            allocation.refresh_from_db(
+                fields=["total_power", "total_voltage", "total_amperage"]
+            )
+
+            # Now create the PowerMonitor row using plain values — not F(),
+            # since F() expressions can't dereference a related object's field
+            # inside .create() like that.
+            PowerMonitor.objects.create(
+                participent=allocation,
+                current_power=power,
+                current_voltage=voltage,
+                current_amperage=amperage,
+                total_power=allocation.total_power,
+                total_voltage=allocation.total_voltage,
+                total_amperage=allocation.total_amperage,
             )
 
         return Response(
             {
-                "status": False,
-                "message": "Unable to update allocation.",
-                "errors": serializer.errors,
+                "status": True,
+                "message": "Allocation updated successfully.",
+                "data": {
+                    **serializer.data,
+                    "total_power": allocation.total_power,
+                    "total_voltage": allocation.total_voltage,
+                    "total_amperage": allocation.total_amperage,
+                },
             },
-            status=status.HTTP_400_BAD_REQUEST,
+            status=status.HTTP_200_OK,
         )
 
     def delete(self, request, pk):
@@ -689,4 +724,43 @@ class AvailableParticipant(APIView):
                     "message":"Error fetching availabe cycles",
                     "error":str(e)
                 }
+            )
+
+class LastFreeTextApiView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [] 
+
+    def get(self,request):
+        try:
+            last_free_text = FreeText.objects.last()
+            if last_free_text:
+                return Response(
+                    {
+                        "status": True,
+                        "message": "Last free text fetched successfully.",
+                        "data": {
+                            "text": last_free_text.text,
+                            "created_at": last_free_text.created_at,
+                            "style": last_free_text.style,
+                            "bg_image_url": request.build_absolute_uri(last_free_text.bg_image.url) if last_free_text.bg_image else None
+                        },
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    {
+                        "status": False,
+                        "message": "No free text found."
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        except Exception as e:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Error fetching last free text.",
+                    "error": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

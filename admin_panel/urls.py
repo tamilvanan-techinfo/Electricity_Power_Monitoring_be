@@ -86,4 +86,9 @@ urlpatterns = [
         TokenRefreshView.as_view(),
         name="refresh",
     ),
+    path(
+        "free-text/",
+        LastFreeTextApiView.as_view(),
+        name="free-text",
+    )
 ]
