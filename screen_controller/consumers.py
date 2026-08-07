@@ -1,10 +1,36 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 import json
+from core.models import *
+from .models import *
+from .serializer import *
+from admin_panel.models import FreeText
+import base64
+from django.core.files.base import ContentFile
 
-from .models import Screen
-
-
+CAMEL_TO_SNAKE_FIELD_MAP = {
+        "x": "x",
+        "y": "y",
+        "width": "width",
+        "height": "height",
+        "fullscreen": "fullscreen",
+        "alwaysOnTop": "always_on_top",
+        "resizable": "resizable",
+        "movable": "movable",
+        "minimizable": "minimizable",
+        "maximizable": "maximizable",
+        "visible": "visible",
+        "menuBarVisible": "menu_bar_visible",
+        "autoHideMenuBar": "auto_hide_menu_bar",
+        "opacity": "opacity",
+        "kiosk": "kiosk",
+        "title": "title",
+        "skipTaskbar": "skip_taskbar",
+        "closable": "closable",
+        "minimized": "minimized",
+        "maximized": "maximized",
+        "focus": "focus",
+    }
 class ScreenConsumer(AsyncWebsocketConsumer):
     connected = {}
 
@@ -53,22 +79,59 @@ class ScreenConsumer(AsyncWebsocketConsumer):
 
             screen = await self.set_live_screen(screen_id)
 
-            # Send only to CLIENTS
-            await self.channel_layer.group_send(
-                "screen_client",
-                {
-                    "type": "screen_changed",
-                    "screen_id": screen.id,
-                    "screen_name": screen.name,
-                    "path": screen.path,
-                    "thumbnail": (
-                        screen.thumbnail.url
-                        if screen.thumbnail
-                        else None
-                    ),
-                    "is_live": screen.is_live,
-                },
-            )
+            if screen.id == 5:
+                init_data = await self.getInitialData()
+                await self.channel_layer.group_send(
+                                "screen_client",
+                                {
+                                    "type": "screen_changed",
+                                    "screen_id": screen.id,
+                                    "screen_name": screen.name,
+                                    "path": screen.path,
+                                    "thumbnail": (
+                                        screen.thumbnail.url
+                                        if screen.thumbnail
+                                        else None
+                                    ),
+                                    "is_live": screen.is_live,
+                                    "init_data":init_data
+                                },
+                            )
+            elif screen.id == 8:
+                data = await self.getFreeText()
+                await self.channel_layer.group_send(
+                    "screen_client",
+                    {
+                        "type": "screen_changed",
+                        "screen_id": screen.id,
+                        "screen_name": screen.name,
+                        "path": screen.path,
+                        "thumbnail": (
+                            screen.thumbnail.url
+                            if screen.thumbnail
+                            else None
+                        ),
+                        "is_live": screen.is_live,
+                        "init_data":data
+                    },
+                )
+
+            else:
+                await self.channel_layer.group_send(
+                    "screen_client",
+                    {
+                        "type": "screen_changed",
+                        "screen_id": screen.id,
+                        "screen_name": screen.name,
+                        "path": screen.path,
+                        "thumbnail": (
+                            screen.thumbnail.url
+                            if screen.thumbnail
+                            else None
+                        ),
+                        "is_live": screen.is_live,
+                    },
+                )
 
             # Optional: Notify admins too
             await self.channel_layer.group_send(
@@ -87,16 +150,77 @@ class ScreenConsumer(AsyncWebsocketConsumer):
                 },
             )
 
+        elif action == "window_update":
+            try:
+                properties = data.get("properties", {})
+
+                await self.getScreenProps(1,properties)
+
+                screen = await self.getScreenProps(1)
+
+                await self.channel_layer.group_send(
+                    "screen_client",
+                    {
+                        "type": "window_update",
+                        "properties": screen,
+                    },
+                )
+
+            except Exception as e:
+                print(e)
+
+        elif action == "send_free_text":
+            try:
+                print("Received free text:", data)
+                data = await self.saveFreeText(data)
+
+                await self.channel_layer.group_send(
+                    "screen_client",
+                    {
+                        "type": "free_text_updated",
+                        "content": data.text,
+                        "bg_image_url": data.bg_image.url if data.bg_image else None,
+                        "style": data.style,
+                    }
+                )
+            except Exception as e:
+                print(e)
+
     async def screen_changed(self, event):
+        data={
+            "type": "screen_changed",
+            "screen_id": event["screen_id"],
+            "screen_name": event["screen_name"],
+            "path": event["path"],
+            "thumbnail": event["thumbnail"],
+            "is_live": event["is_live"],
+            
+        }
+        if event.get("init_data"):
+            data["init_data"] = event["init_data"]
+        print(event)
+        await self.send(
+            text_data=json.dumps(
+                data
+            )
+        )
+    async def window_update(self,event):
         await self.send(
             text_data=json.dumps(
                 {
-                    "type": "screen_changed",
-                    "screen_id": event["screen_id"],
-                    "screen_name": event["screen_name"],
-                    "path": event["path"],
-                    "thumbnail": event["thumbnail"],
-                    "is_live": event["is_live"],
+                    "type": "window_update",
+                    "properties": event["properties"],
+                    
+                }
+            )
+        )
+    async def free_text_updated(self,event):
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "free_text_updated",
+                    "data":event
+                    
                 }
             )
         )
@@ -115,3 +239,83 @@ class ScreenConsumer(AsyncWebsocketConsumer):
         screen.save()
 
         return screen
+
+    @database_sync_to_async
+    def getInitialData(self):
+        data = ActiveParticipent.objects.get(id=1)
+
+        # Convert HH:MM:SS to total minutes
+        duration_minutes = (
+            data.time_duration.hour * 60
+            + data.time_duration.minute
+            + data.time_duration.second // 60
+        )
+
+        response = {
+            "duration": duration_minutes,
+            "cycles": list(data.cycle.values_list("cycle_no", flat=True))
+        }
+
+        return response
+
+    
+    @database_sync_to_async
+    def getScreenProps(self, screen_id, properties=None):
+        screen = ScreenPosition.objects.get(id=screen_id)
+
+        if properties:
+            for field, value in properties.items():
+                model_field = CAMEL_TO_SNAKE_FIELD_MAP.get(field, field)
+                if hasattr(screen, model_field):
+                    setattr(screen, model_field, value)
+                else:
+                    print(f"⚠ Unknown screen property received: {field} (mapped to {model_field})")
+
+            screen.save()
+
+        response = {
+            "height": 0,
+            "width": 0,
+            "x": screen.x,
+            "y": screen.y,
+            "fullscreen": screen.fullscreen,
+            "alwaysOnTop": screen.always_on_top,
+            "resizable": screen.resizable,
+            "movable": screen.movable,
+            "minimizable": screen.minimizable,
+            "maximizable": screen.maximizable,
+            "visible": screen.visible,
+            "menuBarVisible": screen.menu_bar_visible,
+            "autoHideMenuBar": screen.auto_hide_menu_bar,
+            "opacity": screen.opacity,
+        }
+
+        if not screen.fullscreen:
+            response["width"] = screen.width
+            response["height"] = screen.height
+
+        return response
+
+
+    @database_sync_to_async
+    def getFreeText(self):
+        free_text = FreeText.objects.last()
+        return free_text.text if free_text else ""
+
+    @database_sync_to_async
+    def saveFreeText(self, data):
+        free_text = FreeText.objects.create(
+            text=data.get("text", ""),
+            style=data.get("style", {}),
+        )
+
+        bg_image = data.get("bgImage")
+        if bg_image and bg_image.get("data"):
+            decoded = base64.b64decode(bg_image["data"])
+            free_text.bg_image.save(
+                bg_image.get("name", "background.jpg"),
+                ContentFile(decoded),
+                save=True,
+            )
+
+        return free_text

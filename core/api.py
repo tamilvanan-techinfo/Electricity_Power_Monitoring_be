@@ -9,6 +9,7 @@ from screen_controller.models import Screen
 from screen_controller.serializer import ScreenSerializer
 
 from django.db.models import F
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -31,6 +32,8 @@ class LastScreenAPIView(APIView):
 class UpdateReadingAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [] 
+    def get(self,request):
+        return Response("Hello")
     def post(self, request):
         cycle_id = request.data.get("cycle_id")
         voltage = request.data.get("voltage")
@@ -60,6 +63,17 @@ class UpdateReadingAPIView(APIView):
 
             # reload actual numeric totals after F() updates
             allocation.refresh_from_db()  # [web:36][web:44][web:47]
+            try:
+                power_monitor = PowerMonitor.objects.create(
+                    participent = allocation,
+                    current_power = current_power,
+                    current_amperage = current_amperage,
+                    total_power = allocation.total_power,
+                    total_voltage = allocation.total_voltage,
+                    total_amperage =  allocation.total_amperage
+                    )
+            except Exception as e:
+                print(e)
 
             return Response(
                 {
@@ -83,3 +97,126 @@ class UpdateReadingAPIView(APIView):
                 },
                 status=status.HTTP_404_NOT_FOUND,
             )
+        
+
+class GroupingAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [] 
+    def get(self,request):
+        try:
+            grouping = Grouping.objects.first()
+            if grouping:
+                return Response({"is_grouping": grouping.is_grouping}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Grouping not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GroupAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def _serialize_group(self, group):
+        return {
+            "id": group.id,
+            "name": group.name,
+            "members": [
+                {
+                    "id": member.id,
+                    "participent_name": member.participent.name,
+                    "cycle_no": member.cycle.cycle_no,
+                    "controller_no": member.cycle.controller_no,
+                    "voltage": member.voltage,
+                    "amperage": member.amperage,
+                    "power": member.power,
+                }
+                for member in group.members.all()
+            ],
+        }
+
+    def get(self, request):
+        group_id = request.query_params.get("group_id")
+        try:
+            if group_id:
+                group = get_object_or_404(Group, pk=group_id)
+                return Response(self._serialize_group(group), status=status.HTTP_200_OK)
+
+            groups = Group.objects.all()
+            return Response([
+                self._serialize_group(group) for group in groups
+            ], status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        group_id = request.data.get("group_id")
+        name = request.data.get("name")
+        cycle_id = request.data.get("cycle_id")
+        member_ids = request.data.get("member_ids")
+        target_group_id = request.data.get("target_group_id")
+        remove_member_id = request.data.get("remove_member_id")
+
+        try:
+            if group_id:
+                group = get_object_or_404(Group, pk=group_id)
+                if name:
+                    group.name = name
+                    group.save()
+            else:
+                if not name:
+                    return Response({"error": "Group name is required when creating a new group."}, status=status.HTTP_400_BAD_REQUEST)
+                group = Group.objects.create(name=name)
+
+            if target_group_id is not None and cycle_id is not None:
+                target_group = get_object_or_404(Group, pk=target_group_id)
+                member = get_object_or_404(ParticipentCycle, pk=cycle_id)
+                group.members.remove(member)
+                target_group.members.add(member)
+                return Response({
+                    "status": "member_moved",
+                    "from_group": self._serialize_group(group),
+                    "to_group": self._serialize_group(target_group),
+                }, status=status.HTTP_200_OK)
+
+            if member_ids is not None:
+                if not isinstance(member_ids, list):
+                    return Response({"error": "member_ids must be a list."}, status=status.HTTP_400_BAD_REQUEST)
+                members = ParticipentCycle.objects.filter(pk__in=member_ids)
+                group.members.set(members)
+            elif remove_member_id is not None:
+                member = get_object_or_404(ParticipentCycle, pk=remove_member_id)
+                group.members.remove(member)
+            elif cycle_id is not None:
+                member = get_object_or_404(ParticipentCycle, pk=cycle_id)
+                group.members.add(member)
+
+            return Response(self._serialize_group(group), status=status.HTTP_200_OK)
+        except ParticipentCycle.DoesNotExist:
+            return Response({"error": "ParticipentCycle not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Group.DoesNotExist:
+            return Response({"error": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request):
+        group_id = request.data.get("group_id") or request.query_params.get("group_id")
+        cycle_id = request.data.get("cycle_id") or request.query_params.get("cycle_id")
+
+        if not group_id:
+            return Response({"error": "group_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            group = get_object_or_404(Group, pk=group_id)
+            if cycle_id is not None:
+                member = get_object_or_404(ParticipentCycle, pk=cycle_id)
+                group.members.remove(member)
+                return Response({"status": "member_removed", "group_id": group.id}, status=status.HTTP_200_OK)
+
+            group.delete()
+            return Response({"status": "group_deleted", "group_id": int(group_id)}, status=status.HTTP_200_OK)
+        except ParticipentCycle.DoesNotExist:
+            return Response({"error": "ParticipentCycle not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        

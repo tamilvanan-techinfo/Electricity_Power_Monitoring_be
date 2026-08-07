@@ -35,7 +35,8 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('admin/', admin.site.urls),
     path('api/update-reading/', api.UpdateReadingAPIView.as_view(), name='api-update-reading'),
-    path('api/get_active_screen/', api.LastScreenAPIView.as_view(), name='api-update-reading'),
+    path('api/get_active_screen/', api.LastScreenAPIView.as_view(), name='api-get-active-screen'),
+    path('api/group/', api.GroupAPIView.as_view(), name='api-group'),
     path("api/admin/", include("admin_panel.urls"))
 ]
 

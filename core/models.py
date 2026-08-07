@@ -1,5 +1,6 @@
 from django.db import models
-
+from datetime import timedelta
+from django.db import models
 # Create your models here.
 class Cycle(models.Model):
     cycle_no = models.CharField(max_length=100,unique=True)
@@ -24,10 +25,23 @@ class ParticipentCycle(models.Model):
     total_power = models.FloatField(null=True, blank=True, default=0.0)
     total_voltage = models.FloatField(null=True, blank=True, default=0.0)
     total_amperage = models.FloatField(null=True, blank=True, default=0.0)
-
+    duration = models.DurationField(null=True, blank=True, default=timedelta)
     def __str__(self):
-        return f"{self.participent.name} - {self.cycle.cycle_no}"
+        return f"{self.id}"
 
+class PowerMonitor(models.Model):
+    participent = models.ForeignKey(ParticipentCycle,on_delete=models.CASCADE)
+    current_power = models.FloatField(null=True, blank=True, default=0.0)
+    current_voltage = models.FloatField(null=True, blank=True, default=0.0)
+    current_amperage = models.FloatField(null=True, blank=True, default=0.0)
+    updated_at = models.DateTimeField(auto_now=True)
+    total_power = models.FloatField(null=True, blank=True, default=0.0)
+    total_voltage = models.FloatField(null=True, blank=True, default=0.0)
+    total_amperage = models.FloatField(null=True, blank=True, default=0.0)
+
+class ActiveParticipent(models.Model):
+    time_duration = models.TimeField()
+    cycle = models.ManyToManyField(Cycle)
 
 class Grouping(models.Model):
     is_grouping = models.BooleanField(default=False)

@@ -1,0 +1,40 @@
+# Virtual environments
+venv/
+.env312/
+.venv/
+
+# Environment files
+.env
+.env.*
+
+# Git
+.git/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite database
+db.sqlite3
+*.sqlite3
+
+# Django migration files (keep __init__.py)
+**/migrations/*
+!**/migrations/__init__.py
+
+# Node modules
+node_modules/
+
+# Python cache directories
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
