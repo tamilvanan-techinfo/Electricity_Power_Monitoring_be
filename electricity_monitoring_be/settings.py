@@ -44,8 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'admin_panel',
         "rest_framework_simplejwt.token_blacklist",
-        'corsheaders',
-        "cloud_sync"
+        'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -65,14 +64,14 @@ MIDDLEWARE = [
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://172.25.32.1:8000"
+    # "http://172.25.32.1:8000/"
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 ROOT_URLCONF = 'electricity_monitoring_be.urls'
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:5173",
-    "http://172.25.32.1:8000"
+    # "http://172.25.32.1:8000/"
 ]
 TEMPLATES = [
     {
@@ -94,24 +93,19 @@ WSGI_APPLICATION = 'electricity_monitoring_be.wsgi.application'
 # Channels ASGI application
 ASGI_APPLICATION = 'electricity_monitoring_be.asgi.application'
 
+# Channel layer configuration - uses Redis. Install `channels_redis` and run Redis locally.
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis-server", 6379)],
+            "hosts": [("127.0.0.1", 6379)],
         },
     },
 }
 
-CELERY_BROKER_URL = "redis://redis-server:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis-server:6379/0"
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://redis-server:6379/1",
-    }
-}
 # Note: the per-connection 5s data loop now lives in core.consumers
 # (EchoConsumer._send_every_5_seconds) and runs entirely inside the ASGI
 # process — no Celery Beat schedule is needed for it. Celery/Redis above are
@@ -125,9 +119,6 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-        "OPTIONS": {
-            "timeout": 20,  # seconds to wait for the lock before failing
-        },
     }
 }
 
