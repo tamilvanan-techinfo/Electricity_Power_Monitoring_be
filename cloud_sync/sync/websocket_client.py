@@ -4,7 +4,7 @@ import websockets
 
 from .services import save_monitor_data
 
-CLOUD_WS = "ws://twice-arguments-existed-hats.trycloudflare.com/ws/local-server?client_id=django_local"
+CLOUD_WS = "ws://192.168.1.46:8000/ws/local-server?client_id=django_local"
 
 
 class CloudSocketClient:

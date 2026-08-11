@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cycle, Grouping, Participent, ParticipentCycle,ActiveParticipent
+from .models import Cycle, Grouping, Participent, ParticipentCycle,ActiveParticipent,AppTheme
 from screen_controller.models import *
 
 @admin.register(Cycle)
@@ -22,3 +22,4 @@ class GroupingAdmin(admin.ModelAdmin):
 
 admin.site.register(Screen)
 admin.site.register(ActiveParticipent)
+admin.site.register(AppTheme)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.models import Cycle, Participent, ParticipentCycle
+from core.models import Cycle, Participent, ParticipentCycle, AppTheme
 
 
 class CycleSerializer(serializers.ModelSerializer):
@@ -53,3 +53,8 @@ class LoginSerializer(serializers.Serializer):
         attrs["user"] = user
 
         return attrs
+
+class AppThemeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AppTheme
+        fields = "__all__"

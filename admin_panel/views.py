@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from core.models import Cycle, Participent, ParticipentCycle,PowerMonitor
+from core.models import Cycle, Participent, ParticipentCycle,PowerMonitor,AppTheme
 from screen_controller.models import Screen
 from screen_controller.serializer import *
 from .serializer import (
@@ -10,6 +10,7 @@ from .serializer import (
     ParticipentSerializer,
     ParticipentCycleSerializer,
 )
+from .serializer import AppThemeSerializer
 
 from admin_panel.models import FreeText
 
@@ -24,6 +25,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 class LoginAPIView(APIView):
     # Allow anyone to call this endpoint (overrides DEFAULT_PERMISSION_CLASSES)
@@ -764,3 +766,96 @@ class LastFreeTextApiView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class AppThemeAPIView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [] 
+
+    def get(self, request):
+        try:
+            app_theme = AppTheme.objects.filter(is_active=True).first()
+            if app_theme:
+                serializer = AppThemeSerializer(app_theme,many=False)
+                return Response(
+                    {
+                        "status": True,
+                        "message": "App theme fetched successfully.",
+                        "data": serializer.data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    {
+                        "status": False,
+                        "message": "No app theme found."
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+        except Exception as e:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Error fetching app theme.",
+                    "error": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def post(self, request):
+        try:
+            data = request.data.copy()
+            # A freshly created theme is the obvious candidate to go
+            # live immediately unless the caller explicitly says not
+            # to (e.g. saving a preset to switch to later).
+            # data.setdefault("is_active", True)
+ 
+            serializer = AppThemeSerializer(data=data)
+            if not serializer.is_valid():
+                return Response(
+                    {
+                        "status": False,
+                        "message": "Invalid app theme data.",
+                        "errors": serializer.errors,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+ 
+            instance = serializer.save()
+ 
+            # full_clean() re-runs the color validators declared on
+            # the model fields (DRF's serializer validation doesn't
+            # automatically call them) — catches malformed CSS values
+            # the serializer's own field-level checks might miss.
+            try:
+                instance.full_clean(exclude=["created_at", "updated_at"])
+            except DjangoValidationError as e:
+                instance.delete()
+                return Response(
+                    {
+                        "status": False,
+                        "message": "Invalid color/theme value.",
+                        "errors": e.message_dict,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+ 
+            return Response(
+                {
+                    "status": True,
+                    "message": "App theme created successfully.",
+                    "data": AppThemeSerializer(instance).data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "status": False,
+                    "message": "Error creating app theme.",
+                    "error": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        

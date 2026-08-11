@@ -90,5 +90,10 @@ urlpatterns = [
         "free-text/",
         LastFreeTextApiView.as_view(),
         name="free-text",
+    ),
+    path(
+        "app-theme/",
+        AppThemeAPIView.as_view(),
+        name="app-theme",
     )
 ]
